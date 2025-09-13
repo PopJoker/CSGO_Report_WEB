@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>OAuth Callback</title>
+</head>
+
+<body>
+    <h2 id="status">正在處理...</h2>
+
+    <script>
+        // 解析 URL query string
+        function getQueryParams() {
+            const params = {};
+            window.location.search.replace(/[?&]+([^=&]+)=([^&]*)/gi,
+                (m, key, value) => { params[key] = decodeURIComponent(value); });
+            return params;
+        }
+
+        const params = getQueryParams();
+        const statusEl = document.getElementById('status');
+
+        // 判斷是否綁定成功
+        if (params.bind === 'success' && params.token) {
+            // 儲存 JWT 到 localStorage（可選）
+            localStorage.setItem('token', params.token);
+
+            let name = '';
+            if (params.type === 'steam') name = params.steamName || '';
+            if (params.type === 'discord') name = params.discordName || '';
+
+            statusEl.innerText = `綁定成功！${params.type} 名稱: ${name}`;
+
+            // 傳回父視窗
+            if (window.opener) {
+                window.opener.postMessage({
+                    bind: 'success',
+                    type: params.type,
+                    steamName: params.steamName || null,
+                    discordName: params.discordName || null
+                }, '*'); // 若有需要可指定 origin
+            }
+
+            // 自動關閉 popup（可選）
+            setTimeout(() => {
+                window.close();
+            }, 2000);
+
+        } else {
+            statusEl.innerText = `綁定失敗: ${params.error || '未知錯誤'}`;
+
+            if (window.opener) {
+                window.opener.postMessage({
+                    bind: 'fail',
+                    type: params.type || 'unknown',
+                    error: params.error || '未知錯誤'
+                }, '*');
+            }
+        }
+    </script>
+
+</body>
+
+</html>

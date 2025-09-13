@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>CSGO Report</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen flex flex-col font-sans">
+
+  <!-- LOGO + Nav -->
+  <header class="bg-gradient-to-r from-blue-900 to-gray-900 p-4 flex items-center justify-between shadow-lg">
+    <div class="flex items-center space-x-3 relative">
+      <img src="https://res.cloudinary.com/dhkd3debh/image/upload/v1757607261/My%20Brand/POPscanner_rmasf6.png"
+        alt="LOGO" class="h-12 w-auto rounded-full">
+      <span class="text-2xl font-bold tracking-wide">CSGO Report</span>
+      <span id="userNameText" class="ml-3 text-lg text-yellow-400 hidden"></span>
+      <button id="btnLogout" onclick="logout()"
+        class="ml-2 px-3 py-1 bg-red-600 rounded hover:bg-red-700 hidden">登出</button>
+    </div>
+    <nav class="space-x-4">
+      <button id="navLogin" onclick="showPage('login')">登入</button>
+      <button id="navRegister" onclick="showPage('register')">註冊</button>
+      <button id="navReport" onclick="showPage('report')" class="hidden">檢舉</button>
+      <button id="navRecords" onclick="showPage('records')" class="hidden">檢舉紀錄</button>
+      <button id="navAdmin" onclick="showPage('admin')" class="hidden">管理員</button>
+    </nav>
+  </header>
+
+  <main class="flex-1 p-6 flex justify-center items-start">
+    <div class="w-full max-w-xl space-y-6">
+
+      <!-- 登入 -->
+      <div id="login" class="page space-y-4">
+        <h2 class="text-3xl font-bold text-center mb-2">登入</h2>
+        <input id="loginUsername" placeholder="Username" class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <input id="loginPassword" type="password" placeholder="Password"
+          class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <button onclick="login()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded font-semibold">登入</button>
+      </div>
+
+      <!-- 註冊 -->
+      <div id="register" class="page space-y-4 hidden">
+        <h2 class="text-3xl font-bold text-center mb-2">註冊</h2>
+        <input id="regUsername" placeholder="Username" class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <input id="regPassword" type="password" placeholder="Password"
+          class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <button onclick="register()" class="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded font-semibold">註冊</button>
+      </div>
+
+      <!-- 檢舉 -->
+      <div id="report" class="page space-y-4 hidden">
+        <h2 class="text-3xl font-bold text-center mb-2">提交檢舉</h2>
+        <input id="steamId" placeholder="Steam ID" class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <input id="matchId" placeholder="Match ID" class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <input id="type" placeholder="作弊類型" class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <input id="description" placeholder="描述" class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <input id="evidence" type="file" class="w-full p-3 rounded bg-gray-800 border border-gray-700">
+        <!-- 在檢舉區下方加一個進度條 -->
+        <div id="uploadProgressContainer" class="w-full bg-gray-700 rounded h-4 mt-2 hidden">
+          <div id="uploadProgressBar" class="bg-blue-500 h-4 rounded w-0"></div>
+        </div>
+
+        <button onclick="submitReport()"
+          class="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded font-semibold">提交檢舉</button>
+
+        <!-- 綁定 Steam / Discord -->
+        <div id="bindSection" class="mt-4 space-x-2">
+          <button onclick="bindSteam()" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded">綁定 Steam</button>
+          <button onclick="bindDiscord()" class="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded">綁定
+            Discord</button>
+        </div>
+      </div>
+
+      <!-- 檢舉紀錄 -->
+      <div id="records" class="page space-y-4 hidden">
+        <h2 class="text-3xl font-bold text-center mb-2">檢舉紀錄</h2>
+        <input id="querySteam" placeholder="輸入檢舉人或被檢舉人的 SteamID/名稱"
+          class="px-3 py-2 rounded bg-gray-700 text-white w-full" />
+        <button onclick="searchReports()"
+          class="w-full py-3 bg-blue-600 hover:bg-blue-700 rounded font-semibold mt-2">查詢</button>
+        <div id="reportsList" class="space-y-2 mt-2"></div>
+      </div>
+
+      <!-- 管理員頁面 -->
+      <div id="admin" class="page space-y-4 hidden">
+        <h2 class="text-3xl font-bold text-center mb-2">帳號管理</h2>
+        <div class="flex justify-between items-center space-x-2">
+          <button onclick="loadUsers('pending')" class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded">待核准</button>
+          <button onclick="loadUsers('all')" class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded">所有帳號</button>
+        </div>
+        <div id="pendingUsers" class="space-y-2 mt-2"></div>
+        <div id="allUsers" class="space-y-2 mt-2 hidden"></div>
+        <h2 class="text-3xl font-bold text-center mb-2">檢舉管理</h2>
+        <div class="flex justify-between items-center space-x-2 mb-2">
+          <button onclick="loadReports('pending')"
+            class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded">待核准檢舉</button>
+          <button onclick="loadReports('approved')"
+            class="py-2 px-4 bg-blue-600 hover:bg-blue-700 rounded">已核准檢舉</button>
+        </div>
+        <div id="pendingReports" class="space-y-2 mt-2"></div>
+        <div id="approvedReports" class="space-y-2 mt-2 hidden"></div>
+
+      </div>
+
+    </div>
+  </main>
+
+  <div id="msgDiv"
+    class="fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded text-white font-semibold z-50 opacity-0 transition-opacity duration-500">
+  </div>
+
+  <script>
+    let token = null;
+    let isAdminGlobal = false;
+
+    function showPage(id) {
+      document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+      document.getElementById(id).classList.remove('hidden');
+    }
+
+    function showMsg(msg, color = 'blue', duration = 5000) {
+      const div = document.getElementById('msgDiv');
+      div.textContent = msg;
+      div.className = `fixed top-4 left-1/2 transform -translate-x-1/2 px-4 py-2 rounded text-white font-semibold z-50 bg-${color}-600 opacity-100 transition-opacity duration-500`;
+
+      // 先清掉舊的計時器，避免多次呼叫重疊
+      if (div._timeoutId) clearTimeout(div._timeoutId);
+
+      div._timeoutId = setTimeout(() => {
+        div.classList.add('opacity-0');
+
+        // 等動畫跑完後把文字清掉
+        setTimeout(() => {
+          div.textContent = '';
+        }, 500); // 這裡要跟 transition-opacity duration-500 對齊
+      }, duration);
+    }
+
+
+    async function login() {
+      const username = document.getElementById('loginUsername').value;
+      const password = document.getElementById('loginPassword').value;
+      if (!username || !password) return showMsg('請填寫完整資料', 'red', 5000);
+      try {
+        const res = await fetch('http://localhost:5000/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          token = data.token;
+          localStorage.setItem('token', token);
+          isAdminGlobal = data.isAdmin;
+          const displayName = data.steamName || data.discordName || data.username || 'User';
+          setupAfterLogin(isAdminGlobal, displayName, data.steamName, data.discordName);
+          showMsg('登入成功', 'green', 5000);
+        } else showMsg(data.error, 'red', 5000);
+      } catch (e) {
+        console.error(e);
+        showMsg('登入失敗', 'red', 5000);
+      }
+    }
+
+    function logout() {
+      token = null;
+      isAdminGlobal = false;
+      document.getElementById('userNameText').classList.add('hidden');
+      document.getElementById('btnLogout').classList.add('hidden');
+      ['navReport', 'navRecords', 'navAdmin'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      ['navLogin', 'navRegister'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+      showPage('login');
+      const bindSection = document.getElementById('bindSection');
+      const steamSpan = bindSection.querySelector('.steamName');
+      const discordSpan = bindSection.querySelector('.discordName');
+      if (steamSpan) steamSpan.remove();
+      if (discordSpan) discordSpan.remove();
+      bindSection.querySelectorAll('button').forEach(btn => btn.classList.remove('hidden'));
+    }
+
+    function setupAfterLogin(isAdmin, displayName = '', steamName = null, discordName = null, defaultPage = 'report') {
+      isAdminGlobal = isAdmin;
+
+      const userText = document.getElementById('userNameText');
+      userText.textContent = `Hi, ${displayName || 'User'}`;
+      userText.classList.remove('hidden');
+      document.getElementById('btnLogout').classList.remove('hidden');
+
+      ['navLogin', 'navRegister'].forEach(id => document.getElementById(id).classList.add('hidden'));
+      ['navReport', 'navRecords'].forEach(id => document.getElementById(id).classList.remove('hidden'));
+      document.getElementById('navAdmin').classList.toggle('hidden', !isAdminGlobal);
+
+      const bindSection = document.getElementById('bindSection');
+      const steamBtn = bindSection.querySelector('button:nth-child(1)');
+      const discordBtn = bindSection.querySelector('button:nth-child(2)');
+
+      // Steam
+      if (steamName) {
+        steamBtn.classList.add('hidden');
+        let steamSpan = bindSection.querySelector('.steamName');
+        if (!steamSpan) {
+          steamSpan = document.createElement('span');
+          steamSpan.className = 'ml-2 text-green-400 steamName';
+          steamBtn.parentNode.insertBefore(steamSpan, steamBtn);
+        }
+        steamSpan.textContent = `Steam: ${steamName}`;
+      } else steamBtn.classList.remove('hidden');
+
+      // Discord
+      if (discordName) {
+        discordBtn.classList.add('hidden');
+        let discordSpan = bindSection.querySelector('.discordName');
+        if (!discordSpan) {
+          discordSpan = document.createElement('span');
+          discordSpan.className = 'ml-2 text-purple-400 discordName';
+          discordBtn.parentNode.insertBefore(discordSpan, discordBtn);
+        }
+        discordSpan.textContent = `Discord: ${discordName}`;
+      } else discordBtn.classList.remove('hidden');
+
+      if (defaultPage) showPage(defaultPage);
+    }
+
+    function bindSteam() {
+      if (!token) return showMsg('請先登入', 'red', 5000);
+      const url = `http://localhost:5000/auth/steam?token=${token}`;
+      openOAuth(url, 'Steam');
+    }
+
+    function bindDiscord() {
+      if (!token) return showMsg('請先登入', 'red', 5000);
+      const url = `http://localhost:5000/auth/discord?token=${token}`;
+      openOAuth(url, 'Discord');
+    }
+
+    function openOAuth(url, type) {
+      const width = 600, height = 700;
+      const left = (screen.width - width) / 2;
+      const top = (screen.height - height) / 2;
+      const win = window.open(url, type, `width=${width},height=${height},top=${top},left=${left}`);
+
+      function handleMessage(e) {
+        if (!e.data || !e.data.bind) return;
+
+        if (e.data.bind === 'success') {
+          alert(`${type} 綁定成功，請重新登入！`); // 顯示提示
+          logout(); // 強制登出
+
+          if (win) win.close();
+          window.removeEventListener('message', handleMessage);
+        } else if (e.data.bind === 'fail') {
+          showMsg(`${type} 綁定失敗：${e.data.error || '未知錯誤'}`, 'red', 5000);
+          if (win) win.close();
+          window.removeEventListener('message', handleMessage);
+        }
+      } window.addEventListener('message', handleMessage);
+    }
+
+    async function register() {
+      const username = document.getElementById('regUsername').value;
+      const password = document.getElementById('regPassword').value;
+      if (!username || !password) return showMsg('請填寫完整資料', 'red', 5000);
+      try {
+        const res = await fetch('http://localhost:5000/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg('註冊成功，請等待管理員核准', 'green', 5000);
+          showPage('login');
+        } else showMsg(data.error || '註冊失敗', 'red');
+      } catch (err) { console.error(err); showMsg('註冊失敗', 'red', 5000); }
+    }
+
+    // 載入使用者列表
+    async function loadUsers(mode = 'pending') {
+      if (!token) return showMsg('請先登入', 'red', 5000);
+      try {
+        const res = await fetch('http://localhost:5000/users', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        const users = await res.json();
+
+        if (!res.ok) {
+          // 後端有回傳錯誤訊息時顯示
+          return showMsg(users.error || '取得帳號列表失敗', 'red', 5000);
+        }
+
+        const pendingDiv = document.getElementById('pendingUsers');
+        const allDiv = document.getElementById('allUsers');
+
+        // 顯示或隱藏
+        if (mode === 'pending') { pendingDiv.classList.remove('hidden'); allDiv.classList.add('hidden'); }
+        else { pendingDiv.classList.add('hidden'); allDiv.classList.remove('hidden'); }
+
+        pendingDiv.innerHTML = '';
+        allDiv.innerHTML = '';
+
+        // 待核准
+        const pending = users.filter(u => !u.isApproved);
+        if (pending.length === 0) pendingDiv.innerHTML = '<p class="text-gray-400">沒有待核准帳號</p>';
+        pending.forEach(u => {
+          const div = document.createElement('div');
+          div.className = 'flex justify-between items-center bg-gray-800 p-3 rounded';
+          div.innerHTML = `
+            <span>${u.username} (ID:${u.id}) - Admin:${u.isAdmin}</span>
+            <div class="space-x-1">
+              <button class="bg-green-600 hover:bg-green-700 px-2 py-1 rounded" onclick="approveUser(${u.id})">核准</button>
+              <button class="bg-yellow-600 hover:bg-yellow-700 px-2 py-1 rounded" onclick="toggleAdmin(${u.id},${u.isAdmin})">${u.isAdmin ? '降權' : '升權'}</button>
+              <button class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded" onclick="deleteUser(${u.id})">刪除</button>
+            </div>`;
+          pendingDiv.appendChild(div);
+        });
+
+        // 所有帳號
+        const all = users;
+        if (all.length === 0) allDiv.innerHTML = '<p class="text-gray-400">沒有帳號</p>';
+        all.forEach(u => {
+          const div = document.createElement('div');
+          div.className = 'flex justify-between items-center bg-gray-800 p-3 rounded';
+          div.innerHTML = `
+            <span>${u.username} (ID:${u.id}) - Approved:${u.isApproved} - Admin:${u.isAdmin}</span>
+            <div class="space-x-1">
+              ${!u.isApproved ? `<button class="bg-green-600 hover:bg-green-700 px-2 py-1 rounded" onclick="approveUser(${u.id})">核准</button>` : ''}
+              <button class="bg-yellow-600 hover:bg-yellow-700 px-2 py-1 rounded" onclick="toggleAdmin(${u.id},${u.isAdmin})">${u.isAdmin ? '降權' : '升權'}</button>
+              <button class="bg-red-600 hover:bg-red-700 px-2 py-1 rounded" onclick="deleteUser(${u.id})">刪除</button>
+            </div>`;
+          allDiv.appendChild(div);
+        });
+
+      } catch (e) {
+        console.error(e);
+        showMsg('伺服器無回應或網路錯誤', 'red', 5000);
+      }
+    }
+
+    // 核准帳號
+    async function approveUser(id) {
+      try {
+        const res = await fetch(`http://localhost:5000/users/${id}/approve`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg(`帳號 ${data.user.username} 已核准`, 'green', 5000);
+          loadUsers('pending');
+          loadUsers('all');
+        } else showMsg(data.error, 'red');
+      } catch (e) { console.error(e); showMsg('操作失敗', 'red', 5000); }
+    }
+
+    // 升降管理員權限
+    async function toggleAdmin(id, current) {
+      try {
+        const res = await fetch(`http://localhost:5000/users/${id}/promote`, {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + token,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ isAdmin: !current })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg(`帳號 ${data.user.username} 已${!current ? '升權' : '降權'}`, 'green', 5000);
+          loadUsers('pending');
+          loadUsers('all');
+        } else showMsg(data.error, 'red', 5000);
+      } catch (e) { console.error(e); showMsg('操作失敗', 'red', 5000); }
+    }
+
+    // 刪除帳號
+    async function deleteUser(id) {
+      if (!confirm('確定要刪除這個帳號嗎？')) return;
+      try {
+        const res = await fetch(`http://localhost:5000/users/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg(`帳號 ${data.user.username} 已刪除`, 'green', 5000);
+          loadUsers('pending');
+          loadUsers('all');
+        } else showMsg(data.error, 'red', 5000);
+      } catch (e) { console.error(e); showMsg('操作失敗', 'red', 5000); }
+    }
+    // 頁面載入時讀取 token
+    window.addEventListener('load', () => {
+      const savedToken = localStorage.getItem('token');
+      if (savedToken) {
+        token = savedToken;
+        // 可以呼叫後端 /me 或類似 API 取得使用者資訊，再呼叫 setupAfterLogin
+        fetch('http://localhost:5000/me', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        }).then(res => res.json())
+          .then(data => {
+            if (data.username) {
+              const displayName = data.steamName || data.discordName || data.username;
+              setupAfterLogin(data.isAdmin, displayName, data.steamName, data.discordName);
+            }
+          })
+          .catch(() => { localStorage.removeItem('token'); });
+      }
+    });
+
+    async function submitReport() {
+      if (!token) return showMsg('請先登入', 'red', 5000);
+
+      const steamId = document.getElementById('steamId').value;
+      const matchId = document.getElementById('matchId').value;
+      const type = document.getElementById('type').value;
+      const description = document.getElementById('description').value;
+      const evidenceInput = document.getElementById('evidence');
+
+      if (!steamId || !matchId || !type || !description)
+        return showMsg('請填寫完整資料', 'red', 5000);
+
+      const maxSize = 100 * 1024 * 1024; // 100MB
+      if (evidenceInput.files.length > 0) {
+        const file = evidenceInput.files[0];
+        if (file.size > maxSize) {
+          showMsg('檔案過大，最大 100MB，即將前往壓縮網站', 'red', 5000);
+          setTimeout(() => window.open('https://www.youcompress.com/', '_blank'), 1000);
+          return;
+        }
+      }
+
+      const formData = new FormData();
+      formData.append('steamId', steamId);
+      formData.append('matchId', matchId);
+      formData.append('type', type);
+      formData.append('description', description);
+      if (evidenceInput.files.length > 0) formData.append('evidence', evidenceInput.files[0]);
+
+      const progressContainer = document.getElementById('uploadProgressContainer');
+      const progressBar = document.getElementById('uploadProgressBar');
+      progressContainer.classList.remove('hidden');
+      progressBar.style.width = '0%';
+
+      try {
+        const res = await fetch('http://localhost:5000/report', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token },
+          body: formData
+        });
+
+        // 安全處理回傳文字
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { error: '伺服器回傳非 JSON: ' + text };
+        }
+
+        if (!res.ok) throw new Error(data.error || '提交失敗');
+
+        progressBar.style.width = '100%';
+        showMsg(`檢舉提交成功，Steam 名稱: ${data.steamName || '未知'}`, 'green', 5000);
+
+        // 清空表單
+        document.getElementById('steamId').value = '';
+        document.getElementById('matchId').value = '';
+        document.getElementById('type').value = '';
+        document.getElementById('description').value = '';
+        evidenceInput.value = '';
+        progressContainer.classList.add('hidden');
+
+      } catch (err) {
+        console.error(err);
+        showMsg('提交失敗: ' + err.message, 'red', 5000);
+        progressContainer.classList.add('hidden');
+      }
+    }
+
+
+    // 查詢個人檢舉紀錄 (records 頁面)
+    async function getReports() {
+      if (!token) return showMsg('請先登入', 'red', 5000);
+
+      const query = document.getElementById('querySteamId').value;
+      if (!query) return showMsg('請輸入 Steam ID 或名稱', 'red', 5000);
+
+      try {
+        const res = await fetch(`http://localhost:5000/reports?query=${encodeURIComponent(query)}`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        const data = await res.json();
+        const listDiv = document.getElementById('recordsList');
+        listDiv.innerHTML = '';
+
+        if (!res.ok) {
+          showMsg(data.error || '查詢失敗', 'red', 5000);
+          return;
+        }
+
+        if (data.length === 0) {
+          listDiv.innerHTML = '<p class="text-gray-400">沒有檢舉紀錄</p>';
+          return;
+        }
+
+        data.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'bg-gray-800 p-4 rounded mb-4 flex flex-col space-y-2';
+
+          div.innerHTML = `
+        <div class="flex items-center space-x-3">
+          <img src="${r.reporterAvatar || 'default-avatar.png'}" alt="Avatar" class="w-12 h-12 rounded-full">
+          <div>
+            <p><strong>檢舉人:</strong> ${r.reporterName || '未知'} (SteamID: ${r.reporterSteamId || '未知'})</p>
+            <p><strong>等級:</strong> ${r.reporterLevel || '未知'}</p>
+            <p><strong>檢舉對象:</strong> ${r.steamId}</p>
+          </div>
+        </div>
+        <p><strong>類型:</strong> ${r.type}</p>
+        <p><strong>描述:</strong> ${r.description}</p>
+        <p><strong>核准:</strong> ${r.approved ? '是' : '否'} - <strong>時間:</strong> ${new Date(r.createdAt).toLocaleString()}</p>
+      `;
+
+          // 證據
+          if (r.evidenceUrl) {
+            const ext = r.evidenceUrl.split('.').pop().toLowerCase();
+            let media;
+            if (['mp4', 'webm', 'ogg'].includes(ext)) {
+              media = document.createElement('video');
+              media.src = r.evidenceUrl;
+              media.controls = true;
+              media.className = 'mt-2 rounded w-full';
+            } else {
+              media = document.createElement('img');
+              media.src = r.evidenceUrl;
+              media.className = 'mt-2 rounded w-full';
+            }
+            div.appendChild(media);
+          }
+
+          listDiv.appendChild(div);
+        });
+
+      } catch (err) {
+        console.error(err);
+        showMsg('查詢失敗: ' + (err.message || '未知錯誤'), 'red', 5000);
+      }
+    }
+
+    // 管理員載入檢舉列表
+    async function loadReports(mode = 'pending') {
+      if (!token) return showMsg('請先登入', 'red', 5000);
+
+      const pendingDiv = document.getElementById('pendingReports');
+      const approvedDiv = document.getElementById('approvedReports');
+      pendingDiv.innerHTML = '<p class="text-gray-400">Loading...</p>';
+      approvedDiv.innerHTML = '<p class="text-gray-400">Loading...</p>';
+
+      try {
+        const res = await fetch(`http://localhost:5000/admin/reports?status=${mode}`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const reports = await res.json();
+        if (!res.ok) return showMsg(reports.error || '取得檢舉列表失敗', 'red', 5000);
+
+        const targetDiv = mode === 'pending' ? pendingDiv : approvedDiv;
+        targetDiv.innerHTML = '';
+
+        if (!reports || reports.length === 0) {
+          targetDiv.innerHTML = '<p class="text-gray-400">沒有檢舉紀錄</p>';
+          return;
+        }
+
+        reports.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'bg-gray-800 p-4 rounded mb-4 flex flex-col space-y-2';
+
+          div.innerHTML = `
+        <div class="flex items-center space-x-3">
+          <img src="${r.reporterAvatar || 'default-avatar.png'}" alt="Avatar" class="w-12 h-12 rounded-full">
+          <div>
+            <p><strong>檢舉人:</strong> ${r.reporterName || '未知'} (SteamID: ${r.reporterSteamId || '未知'})</p>
+            <p><strong>等級:</strong> ${r.reporterLevel || '未知'}</p>
+            <p><strong>檢舉對象:</strong> ${r.steamId}</p>
+          </div>
+        </div>
+        <p><strong>類型:</strong> ${r.type}</p>
+        <p><strong>描述:</strong> ${r.description}</p>
+        <p><strong>時間:</strong> ${new Date(r.createdAt).toLocaleString()}</p>
+      `;
+
+          // 證據
+          if (r.evidenceUrl) {
+            const ext = r.evidenceUrl.split('.').pop().toLowerCase();
+            let media;
+            if (['mp4', 'webm', 'ogg'].includes(ext)) {
+              media = document.createElement('video');
+              media.src = r.evidenceUrl;
+              media.controls = true;
+              media.className = 'mt-2 rounded w-full';
+            } else {
+              media = document.createElement('img');
+              media.src = r.evidenceUrl;
+              media.className = 'mt-2 rounded w-full';
+            }
+            div.appendChild(media);
+          }
+
+          // 管理員操作按鈕 (僅 pending)
+          if (mode === 'pending') {
+            const btnDiv = document.createElement('div');
+            btnDiv.className = 'flex space-x-2 mt-2';
+            const approveBtn = document.createElement('button');
+            approveBtn.className = 'bg-green-600 hover:bg-green-700 px-2 py-1 rounded';
+            approveBtn.textContent = '核准';
+            approveBtn.onclick = () => approveReport(r.id);
+
+            const rejectBtn = document.createElement('button');
+            rejectBtn.className = 'bg-red-600 hover:bg-red-700 px-2 py-1 rounded';
+            rejectBtn.textContent = '拒絕';
+            rejectBtn.onclick = () => rejectReport(r.id);
+
+            btnDiv.appendChild(approveBtn);
+            btnDiv.appendChild(rejectBtn);
+            div.appendChild(btnDiv);
+          }
+
+          targetDiv.appendChild(div);
+        });
+
+        pendingDiv.classList.toggle('hidden', mode !== 'pending');
+        approvedDiv.classList.toggle('hidden', mode === 'pending');
+
+      } catch (e) {
+        console.error(e);
+        showMsg('伺服器無回應或網路錯誤', 'red', 5000);
+        pendingDiv.innerHTML = '';
+        approvedDiv.innerHTML = '';
+      }
+    }
+
+    // 核准檢舉
+    async function approveReport(id) {
+      try {
+        const res = await fetch(`http://localhost:5000/admin/reports/${id}/approve`, {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg(`檢舉 ${id} 已核准`, 'green', 5000);
+          loadReports('pending');
+        } else showMsg(data.error, 'red', 5000);
+      } catch (e) { console.error(e); showMsg('操作失敗', 'red', 5000); }
+    }
+
+    // 拒絕檢舉
+    async function rejectReport(id) {
+      if (!confirm('確定要拒絕這個檢舉嗎？')) return;
+      try {
+        const res = await fetch(`http://localhost:5000/admin/reports/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showMsg(`檢舉 ${id} 已拒絕`, 'green', 5000);
+          loadReports('pending');
+        } else showMsg(data.error, 'red', 5000);
+      } catch (e) { console.error(e); showMsg('操作失敗', 'red', 5000); }
+    }
+
+    // 顯示檢舉紀錄
+    function displayReports(data) {
+      const container = document.getElementById('reportsList');
+      container.innerHTML = ''; // 清空舊紀錄
+
+      if (!data.length) {
+        container.innerHTML = '<p class="text-center text-gray-400">沒有檢舉紀錄</p>';
+        return;
+      }
+
+      data.forEach(r => {
+        const div = document.createElement('div');
+        div.className = 'p-3 bg-gray-800 rounded';
+        div.innerHTML = `
+            <p><strong>被檢舉人:</strong> ${r.steamName || r.steamId}</p>
+            <p><strong>類型:</strong> ${r.type}</p>
+            <p><strong>檢舉人:</strong> ${r.reporter?.steamName || r.reporter?.steamId || '匿名'}</p>
+            <p><strong>描述:</strong> ${r.description || '無'}</p>
+            ${r.evidenceUrl ? `<p><a href="${r.evidenceUrl}" target="_blank">檢舉證據</a></p>` : ''}
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // 登入後自動載入自己的檢舉紀錄
+    window.addEventListener('DOMContentLoaded', async () => {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      try {
+        const resp = await fetch('/reports', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const data = await resp.json();
+        displayReports(data);
+      } catch (err) {
+        console.error('載入檢舉紀錄失敗:', err);
+      }
+    });
+
+    async function searchReports() {
+      if (!token) return showMsg('請先登入', 'red', 5000);
+
+      const query = document.getElementById('querySteam').value;
+      if (!query) return showMsg('請輸入 Steam ID 或名稱', 'red', 5000);
+
+      try {
+        const res = await fetch(`http://localhost:5000/reports?query=${encodeURIComponent(query)}`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+
+        const data = await res.json();
+        const list = document.getElementById('reportsList');
+        list.innerHTML = '';
+
+        if (!res.ok) {
+          return showMsg(data.error || '查詢失敗', 'red', 5000);
+        }
+
+        if (data.length === 0) {
+          list.innerHTML = '<p class="text-gray-400">沒有符合的檢舉紀錄</p>';
+          return;
+        }
+
+        data.forEach(r => {
+          const div = document.createElement('div');
+          div.className = 'bg-gray-800 p-3 rounded';
+          div.innerHTML = `
+        <p><strong>檢舉人:</strong> ${r.reporter?.steamName || r.reporter?.username || '未知'}</p>
+        <p><strong>Steam ID:</strong> ${r.steamId}</p>
+        <p><strong>Match ID:</strong> ${r.matchId}</p>
+        <p><strong>類型:</strong> ${r.type}</p>
+        <p><strong>描述:</strong> ${r.description}</p>
+        <p><strong>狀態:</strong> 
+          <span class="${r.approved ? 'text-green-400' : 'text-yellow-400'}">
+            ${r.approved ? '已核准' : '待審核'}
+          </span>
+        </p>
+      `;
+          list.appendChild(div);
+        });
+
+      } catch (err) {
+        console.error(err);
+        showMsg('伺服器錯誤', 'red', 5000);
+      }
+    }
+
+  </script>
+
+</body>
+
+</html>

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Review - CSGO Report</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex flex-col">
+  <header class="bg-blue-900 p-4 flex items-center justify-between">
+    <h1 class="text-xl font-bold">管理員審核頁面</h1>
+    <button onclick="logout()" class="hover:text-blue-300">登出</button>
+  </header>
+
+  <main class="flex-1 p-6 flex justify-center">
+    <div class="w-full max-w-3xl space-y-4" id="reportsList">
+      <!-- 未審核檢舉會在這裡生成 -->
+    </div>
+  </main>
+
+<script>
+let token = localStorage.getItem('token') || '';
+if(!token) {
+  alert('請先登入管理員帳號');
+  window.location.href = '/';
+}
+
+// 取得未審核檢舉
+async function loadReports() {
+  const res = await fetch('http://localhost:5000/admin/reports', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if(res.status===401 || res.status===403){
+    alert('你不是管理員或登入過期');
+    window.location.href = '/';
+    return;
+  }
+  const reports = await res.json();
+  const container = document.getElementById('reportsList');
+  container.innerHTML = '';
+  if(reports.length===0){
+    container.textContent = '沒有待審核檢舉';
+    return;
+  }
+  reports.forEach(r=>{
+    const div = document.createElement('div');
+    div.className = 'p-4 bg-gray-800 rounded flex justify-between items-start space-x-4';
+    div.innerHTML = `
+      <div class="space-y-1">
+        <div><strong>Steam ID:</strong> ${r.steamId}</div>
+        <div><strong>Match:</strong> ${r.matchId || 'N/A'}</div>
+        <div><strong>Type:</strong> ${r.type}</div>
+        <div><strong>Desc:</strong> ${r.description || '無'}</div>
+        <div><strong>Evidence:</strong> ${r.evidenceUrl ? `<a href="${r.evidenceUrl}" target="_blank" class="text-blue-400 underline">查看</a>` : '無'}</div>
+        <div class="text-gray-400 text-sm"><strong>提交時間:</strong> ${new Date(r.createdAt).toLocaleString()}</div>
+      </div>
+      <button class="py-1 px-3 bg-green-600 hover:bg-green-700 rounded" onclick="approveReport(${r.id})">批准</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// 批准檢舉
+async function approveReport(id){
+  const res = await fetch(`http://localhost:5000/report/${id}/approve`,{
+    method:'POST',
+    headers:{ 'Authorization':'Bearer '+token }
+  });
+  if(res.ok){
+    alert('已批准');
+    loadReports();
+  } else {
+    alert('批准失敗');
+  }
+}
+
+// 登出
+function logout(){
+  localStorage.removeItem('token');
+  window.location.href = '/';
+}
+
+// 初始
+loadReports();
+</script>
+</body>
+</html>
