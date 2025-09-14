@@ -539,8 +539,8 @@ const startServer = async () => {
     try {
         await sequelize.sync();
 
-        // 初始化管理員
-        if (process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD) {
+        // 初始化管理員（只在 INIT_ADMIN=true 時建立）
+        if (process.env.INIT_ADMIN === 'true' && process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD) {
             const existingAdmin = await User.findOne({ where: { username: process.env.ADMIN_USERNAME } });
             if (!existingAdmin) {
                 const hash = await bcrypt.hash(process.env.ADMIN_PASSWORD, 10);
@@ -553,7 +553,11 @@ const startServer = async () => {
                     discordId: process.env.ADMIN_DISCORDID || null
                 });
                 console.log('Admin account created');
+            } else {
+                console.log('Admin already exists, skipping creation');
             }
+        } else {
+            console.log('INIT_ADMIN not set to true, skipping admin creation');
         }
 
         const PORT = process.env.PORT || 5000;
@@ -562,7 +566,6 @@ const startServer = async () => {
         console.error('Failed to start server:', err);
     }
 };
-
 // 更新 Steam 名稱
 const updateSteamName = async (user) => {
     try {
