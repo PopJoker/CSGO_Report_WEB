@@ -1,11 +1,9 @@
 {
   "name": "csgo-report-web",
   "version": "1.0.0",
-  "type": "module",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -30,7 +28,7 @@
     "passport-steam": "^1.0.18",
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.1",
-    "sqlite3": "^5.1.7",
+    "sqlite3": "^5.1.7"
     "pg": "^8.11.0"
   }
 }
